@@ -1,8 +1,9 @@
 <%- include('includes/header') %>
 
   <div class="container login-page">
+      <%- messages() %>
+    <form method="post" action="/users/login" class="form-signin">
 
-    <form class="form-signin">
       <h2 class="form-signin-heading text-center">User Login</h2>
       <label class="sr-only">Email address</label>
       <input type="text" name="username" class="form-control" placeholder="User Name" required autofocus>
