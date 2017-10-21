@@ -53,23 +53,81 @@ router.post('/register', function (req, res) {
       username: username,
       password: password
     }
-    db.users.insert(newUser, function(err, doc){
-      if(err){
-        res.send(err);
-      }else {
-        console.log('User added...');
+    bcrypt.genSalt(10, function (err, salt) {
+      bcrypt.hash(newUser.password, salt, function (err, hash) {
+        newUser.password = hash;
 
-        // Success Message
-        req.flash('success', 'You are registered and can now log in');
+        db.users.insert(newUser, function (err, doc) {
+          if (err) {
+            res.send(err);
+          } else {
+            console.log('User added...');
 
-        // Redirect after register
-        res.location('/');
-        res.redirect('/');
+            // Success Message
+            req.flash('success', 'You are registered and can now log in');
 
-      }
-    })
+            // Redirect after register
+            res.location('/');
+            res.redirect('/');
+
+          }
+        });
+      });
+    });
+
+
   }
 
+});
+
+passport.serializeUser(function(user, done){
+  done(null, user._id);
+});
+
+passport.deserializeUser(function(id, done){
+  db.users.findOne({_id: mongojs.ObjectId(id)}, function(err, user){
+    done(err, user);
+  })
+});
+
+passport.use(new LocalStrategy(
+  function(username, password, done){
+    db.users.findOne({username: username}, function(err, user){
+      if(err){
+        return done(err);
+      }
+      if(!user){
+        return done(null, false, {message: 'Incorrect username'});
+      }
+      bcrypt.compare(password, user.password, function(err, isMatch){
+        if(err){
+          return done(err);
+        }
+        if(isMatch){
+          return done(null, user);
+        }else {
+          return done(null, false, {message: 'Incorrect password'});
+        }
+      });
+    });
+  }
+));
+
+// Login POST
+router.post('/login', passport.authenticate('local', {
+    successRedirect: '/',
+    failureRedirect: '/users/login',
+    failureFlash: 'Invalid Username or Password'
+  }),
+  function (req, resp) {
+    console.log('Auth Successfull');
+    res.redirect('/');
+  });
+
+router.get('/logout', function(req, res){
+  req.logout();
+  req.flash('success', 'You have logged out');
+  res.redirect('/users/login');
 });
 
 module.exports = router;
